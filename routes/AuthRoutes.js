@@ -9,8 +9,13 @@ const {
 
 const router = express.Router();
 
-router.route("/").get(getAllUsers);
-router.route("/signup").post(createUser);
-// router.route("/login").post(login);
+router.route("/").get(getAllUsers); // for debugging purposes
+router.route("/signup").post(createUser); // done
+router.route("/login").post(login); // to do
+router.route("/logout").post(logout); // to do
 
+/* Can implement if time permits
+router.route("/changePassword").post(changePassword);
+router.route("/recoverPassword").post(recoverPassword);
+*/
 module.exports = router;
