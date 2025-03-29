@@ -4,27 +4,28 @@ const dotenv = require('dotenv');
 const cors = require('cors')
 
 const app = express();
+dotenv.config();
+const port = process.env.PORT || 3001;
 
-app.use(cors({origin: 'http://localhost:3001', credentials: true}));
+app.use(cors({origin: `http://localhost:${port}`, credentials: true}));
 app.use(cookieParser());
 app.use(express.json());
-dotenv.config();
 
 const authRouter = require("./routes/AuthRoutes");
 app.use("/auth", authRouter);
 
-app.listen(3001, () => {
-    console.log("Server is running on port 3001");
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
 });
 
 module.exports = app;
 
 const mongoose = require("mongoose");
-const queryString = process.env.MONGODB_USERS_URI || "mongodb+srv://dobalam:dobalam-it4409@lamdb-it4409.ybiwz.mongodb.net/College?retryWrites=true&w=majority&appName=lamdb-it4409";
+const queryUsers = process.env.MONGODB_USERS_URI;
 
 //configure mongoose
-mongoose.connect(queryString, {
+const userDB = mongoose.connect(queryUsers, {
     useNewUrlParser: true,
     useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected!'))
-    .catch(err => console.log('MongoDB connection error:', err.message));
+}).then(() => console.log('User MongoDB connected!'))
+    .catch(err => console.log('User MongoDB connection error:', err.message));

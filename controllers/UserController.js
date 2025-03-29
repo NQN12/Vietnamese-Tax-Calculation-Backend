@@ -55,25 +55,64 @@ exports.createUser = async (req, res) => {
     }
 }
 
-exports.getUserByUsername = async (req, res) => {
-    try {
+exports.login = async (req, res) => {
+    try{
         const {username, password} = req.body;
-        const user = await UserModel.findOne(username);
+        const user = await UserModel.findOne({username : username});
         if (user == null) {
-            return res.status(400).json({ message: `Cannot find username ${username}`, status: "error" }); // For security purposes, do not specify the error message
+            return res.status(400).json({ message: `Wrong username`, status: "error" }); // For security purposes, do not specify the error message
         }
 
         // Check if password is correct
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: "Invalid credentials", status: "error" });
+            return res.status(400).json({ message: "Wrong password", status: "error" });
         }
 
         // Generate token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-        // Set cookie marked as httpOnly => protect against XSS (Cross-Site Scripting) attacks
-        res.cookie("token", token, { httpOnly: true }).json({token, message: "User successfully logged in", status: "success"});
+        const accessToken = jwt.sign(
+            { id: user._id }, 
+            process.env.ACCESS_TOKEN_SECRET, 
+            { expiresIn: "1h" }
+        );
+        const refreshToken = jwt.sign(
+            { id: user._id }, 
+            process.env.REFRESH_TOKEN_SECRET, 
+            { expiresIn: "1d" }
+        );
+
+        // Set cookie marked as httpOnly 
+        // => protect against XSS (Cross-Site Scripting) attacks
+        res.cookie(
+            "jwt", 
+            refreshToken, 
+            { 
+                httpOnly: true, 
+                sameSite: "None", 
+                maxAge: 3 * 24 * 60 * 60 
+            }
+        ); 
+        res.json({accessToken, message: "User successfully logged in", status: "success"});
+        // res.setHeader('Access-Control-Allow-Origin', '*');
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+exports.logout = async (req, res) => {
+    try {
+        console.log("Clearing cookie...");
+        // Clear the cookie
+        res.clearCookie(
+            "jwt",
+            { 
+                httpOnly: true, 
+                sameSite: "None", 
+            }
+        );
+        console.log("Cookie cleared");
         res.setHeader('Access-Control-Allow-Origin', '*');
+        res.json({ message: "User successfully logged out", status: "success" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -104,6 +143,7 @@ exports.updateUser = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 }
+
 exports.deleteUser = async (req, res) => {
     try {
         const username = req.params.username;
