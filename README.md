@@ -8,3 +8,5 @@
 * POST signup: ```http://localhost:3000/auth/signup/``` with body: ```{"username": ..., "email": ..., "password": ...}```
 * POST login: ```http://localhost:3000/auth/login``` with body: ```{"username": ..., "password":...}``` 
 * POST logout: ```http://localhost:3000/auth/logout```
+* POST forgotPassword: ```http://localhost:3000/auth/forgotPassword``` with body ```{"email": ...}```
+* POST resetPassword: ```http://localhost:3000/auth/resetPassword``` with body ```{"email": ..., "otp": ..., "newPassword": ..., "oldPassword": ...}```
