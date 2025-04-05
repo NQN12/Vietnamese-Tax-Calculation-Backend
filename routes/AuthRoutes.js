@@ -3,7 +3,9 @@ const {
     getAllUsers,
     createUser,
     login,
-    logout
+    logout,
+    forgotPassword,
+    resetPassword
 } = require("../controllers/UserController");
 
 const router = express.Router();
@@ -13,8 +15,7 @@ router.route("/signup").post(createUser); // done
 router.route("/login").post(login); // done
 router.route("/logout").post(logout); // done
 
-/* Can implement if time permits
-router.route("/changePassword").post(changePassword);
-router.route("/recoverPassword").post(recoverPassword);
-*/
+router.route("/forgotPassword").post(forgotPassword);
+router.route("/resetPassword").post(resetPassword);
+
 module.exports = router;

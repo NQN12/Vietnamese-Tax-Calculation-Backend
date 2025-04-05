@@ -1,4 +1,5 @@
 const express = require("express");
+const authRouter = require("./routes/AuthRoutes");
 const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const cors = require('cors')
@@ -11,7 +12,6 @@ app.use(cors({origin: `http://localhost:${port}`, credentials: true}));
 app.use(cookieParser());
 app.use(express.json());
 
-const authRouter = require("./routes/AuthRoutes");
 app.use("/auth", authRouter);
 
 app.listen(port, () => {
