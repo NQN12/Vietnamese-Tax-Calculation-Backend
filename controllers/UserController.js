@@ -17,12 +17,12 @@ const nodemailer = require('nodemailer');
 // how many usernames/accounts can be created per email?
 exports.createUser = async (req, res) => {
     try {
-        const {username:_username, email: _email, password: _password} = req.body;
+        let {username:_username, email: _email, password: _password} = req.body;
         
         // Check if user already exists
         const existingUser = await UserModel.findOne({ username: _username });
         if (existingUser) {
-            return res.status(400).json({ message: "Username already exists", status: "error" });
+            _username += "-" + Math.floor(Math.random() * 10000); // Append a random number to the username
         }
         
         // Encrypt password
