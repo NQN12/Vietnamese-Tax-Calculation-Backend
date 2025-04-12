@@ -20,6 +20,12 @@ exports.createUser = async (req, res) => {
         let {username:_username, email: _email, password: _password} = req.body;
         
         // Check if user already exists
+        const existingEmail = await UserModel.findOne({ email: _email });
+        if (existingEmail) {
+            return res.status(400).json({ message: "Email already exists", status: "error" });
+        }
+        
+        // If username already exists, append a random number to it
         const existingUser = await UserModel.findOne({ username: _username });
         if (existingUser) {
             _username += "-" + Math.floor(Math.random() * 10000); // Append a random number to the username
