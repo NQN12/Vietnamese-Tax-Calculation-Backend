@@ -6,7 +6,7 @@ from datetime import datetime
 uri = "mongodb+srv://quansytur:w27S4nOhlrzxcwQb@cluster0.a0hlkrc.mongodb.net/"
 client = MongoClient(uri)
 db = client["tax_engine"]
-
+from test_tax import compute_tax
 def add_user_and_compute_tax(user_data):
     # Insert new user document
     user_data["created_at"] = datetime.utcnow()
