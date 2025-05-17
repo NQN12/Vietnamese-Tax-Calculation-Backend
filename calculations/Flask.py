@@ -21,11 +21,10 @@ def calculate_tax():
 if __name__ == "__main__":
     app.run(debug=True)
 {
-  "year":2025
-  "month":1
-  "residency_status": "resident",
+  "year":2025,
+  "month":1,
   "dependents": 1,
-  "region": 1,
+  "region": 1,2,3,4 ,
 
   "income_labor_contract": 20000000,
   "taxed_labor_contract": false,
