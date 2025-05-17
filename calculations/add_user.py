@@ -3,7 +3,7 @@ from bson.objectid import ObjectId
 from datetime import datetime
 from testtax import compute_tax
 # Setup
-uri = "mongodb+srv://quansytur:w27S4nOhlrzxcwQb@cluster0.a0hlkrc.mongodb.net/"
+uri = "mongodb+srv://quyngoc2705:zuaFeu99jVbRgDW7@cluster0.cqhtd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 client = MongoClient(uri)
 db = client["tax_engine"]
 
@@ -44,7 +44,7 @@ def add_user_and_compute_tax(user_data):
 
 #Test function
 new_user_data = {
-    "user_id": ObjectId(),  # Replace with real user id logic if needed
+    "user_id": ObjectId("67f09d22929f6ab99e66f19a"),  # Replace with real user id logic if needed
     "salary_info": {
         "salary_amount": 20_000_000,
         "is_net_salary": True

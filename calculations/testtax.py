@@ -9,7 +9,7 @@ def calculate_progressive_tax(taxable_income):
         (18_000_000, 32_000_000, 0.20),
         (32_000_000, 52_000_000, 0.25),
         (52_000_000, 80_000_000, 0.30),
-        (80_000_000, float('inf'), 0.35)
+        (80_000_000, float('inf'), 0.35),
     ]
     tax = 0
     for lower, upper, rate in brackets:
@@ -37,33 +37,54 @@ def compute_tax(
     contract_type='long_term',
     residency_status='resident',
     num_dependents=0,
+    months_worked=12,
     region=1,
     extra_incomes=None,
     company_bonus=0,
-    already_withheld=None
+    already_withheld=None,
+    social_insurance_paid=0, # phòng cho trường hợp tự đóng
+    charity_donations=0,
+    total_income=0 # trong trường hợp người không có hợp đồng lao động cần kê khai thu nhập cả năm
 ):
     extra_incomes = extra_incomes or {}
     already_withheld = already_withheld or {}
 
     if net_salary and not gross_salary and contract_type == 'long_term':
         gross_salary = calculate_gross_from_net(net_salary, num_dependents)
+
     gross_salary = gross_salary or 0
-
-    social_insurance = 0.105 * gross_salary if contract_type == 'long_term' and residency_status == 'resident' else 0
-
+    social_insurance = 0
     personal_deduction = 11_000_000
     dependent_deduction = 4_400_000 * num_dependents
-    taxable_income = gross_salary - social_insurance - personal_deduction - dependent_deduction
-    if company_bonus:
-        taxable_income += company_bonus
 
-    income_tax = 0
-    if residency_status == 'resident' and contract_type == 'long_term':
-        income_tax = calculate_progressive_tax(taxable_income) if taxable_income > 0 else 0
+    if contract_type == 'long_term' and residency_status == 'resident':
+        social_insurance = gross_salary * 0.105
+
+    taxable_income = gross_salary - social_insurance
+
+
+    if contract_type == 'short_term' and residency_status == 'resident':
+        total_annual_income = total_income
+
+        # Trường hợp thu nhập không có hợp đồng, áp thuế 10% nếu tổng thu nhập > 132 triệu
+        if contract_type == 'short_term':
+            if total_annual_income > 132_000_000:
+                tax = total_income * 0.10
+            else:
+                tax = 0  # Thu nhập thấp hơn thì không bị tính thuế
+
     elif residency_status == 'non_resident':
-        income_tax = round(gross_salary * 0.2)
-    elif contract_type == 'short_term':
-        income_tax = round(gross_salary * 0.10)
+        # Không cư trú: không được giảm trừ gia cảnh
+        taxable_income = (gross_salary - social_insurance) * months_worked
+        taxable_income += company_bonus
+        taxable_income -= charity_donations
+        taxable_income = max(taxable_income, 0)
+        income_tax = round(taxable_income * 0.20) if taxable_income > 0 else 0
+
+    else:
+        # Dự phòng cho short_term
+        taxable_income = gross_salary - social_insurance
+        income_tax = round(taxable_income * 0.10) if taxable_income > 0 else 0
 
     flat_tax_rates = {
         'freelance': 0.07,
@@ -110,7 +131,7 @@ def compute_tax(
     }
 
 def fetch_user_tax_data(user_id):
-    uri = "mongodb+srv://quansytur:w27S4nOhlrzxcwQb@cluster0.a0hlkrc.mongodb.net/"
+    uri = "mongodb+srv://quyngoc2705:zuaFeu99jVbRgDW7@cluster0.cqhtd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     client = MongoClient(uri)
     db = client["tax_engine"]
 
@@ -132,14 +153,17 @@ def fetch_user_tax_data(user_id):
         contract_type=user_profile.get("contract_type", "long_term"),
         residency_status=user_profile.get("residency_status", "resident"),
         num_dependents=user_profile.get("dependents", 0),
+        months_worked=user_profile.get("months_worked", 12),
         region=user_profile.get("region", 1),
         extra_incomes=user_profile.get("additional_income", {}),
         company_bonus=user_profile.get("company_bonus", 0),
-        already_withheld=user_profile.get("already_withheld", {})
+        already_withheld=user_profile.get("already_withheld", {}),
+        social_insurance_paid=user_profile.get("social_insurance_paid", 0),
+        charity_donations=user_profile.get("charity_donations", 0),
     )
 
 if __name__ == "__main__":
-    sample_user_id = "67f09d22929f6ab99e66f19a"  
+    sample_user_id = "67f09d22929f6ab99e66f19a"
     result = fetch_user_tax_data(sample_user_id)
 
     if result:
