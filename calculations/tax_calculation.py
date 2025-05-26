@@ -47,7 +47,7 @@ def calculate_progressive_tax(taxable_income):
         if taxable_income > lower:
             taxed_amount = min(taxable_income, upper) - lower
             tax += taxed_amount * rate
-    return round(tax,2)
+    return round(tax,4)
 
 
 def compute_tax(data):
@@ -76,7 +76,7 @@ def compute_tax(data):
             taxable = max(income_labor - personal_deduction - dependent_deduction, 0)
             due = calculate_progressive_tax(taxable)
         else:
-            due = round(income_labor * 0.20,2)
+            due = round(income_labor * 0.20,4)
         paid = 0
         tax_due_total["business"] += due
     result["business_income"]["income_labor_contract"] = {
@@ -89,12 +89,12 @@ def compute_tax(data):
     income_short = data.get("income_no_contract", 0)
     total_income += income_short
     if data.get("taxed_no_contract", False):
-        paid = round(income_short * 0.10,2)
+        paid = round(income_short * 0.10,4)
         due = 0
         tax_paid_total["business"] += paid
     else:
         if income_short * 12 > 132:
-            due = round(income_short * 0.10,2)
+            due = round(income_short * 0.10,4)
             paid = 0
             tax_due_total["business"] += due
         else:
@@ -108,7 +108,7 @@ def compute_tax(data):
     # 3. income_foreign_contract
     income_foreign = data.get("income_foreign_contract", 0)
     total_income += income_foreign
-    tax_foreign = round(income_foreign * 0.20,2)
+    tax_foreign = round(income_foreign * 0.20,4)
     if data.get("deducted_tax_abroad", False):
         paid = tax_foreign
         due = 0
@@ -136,7 +136,7 @@ def compute_tax(data):
         for key, val in data.get("business_income_flat", {}).items():
             total_income += val
             rate = rates.get(key, 0)
-            due = round(val * rate,2)
+            due = round(val * rate,4)
             paid = 0
             tax_due_total["business"] += due
             result["business_income"][f"business_{key}"] = {
@@ -173,7 +173,7 @@ def compute_tax(data):
 
     for key, val in once_off_income.items():
         total_income += val
-        tax = round(val * once_rates.get(key, 0),2)
+        tax = round(val * once_rates.get(key, 0),4)
         if taxed_once.get(key, False):
             paid = tax
             due = 0
@@ -188,10 +188,10 @@ def compute_tax(data):
             "tax_due": due
         }
 
-    result["total_income"] = round(total_income,2)
+    result["total_income"] = round(total_income,4)
     result["summary"] = {
-        "tax_paid": {k: round(v,2) for k, v in tax_paid_total.items()},
-        "tax_need_to_pay": {k: round(v,2) for k, v in tax_due_total.items()}
+        "tax_paid": {k: round(v,4) for k, v in tax_paid_total.items()},
+        "tax_need_to_pay": {k: round(v,4) for k, v in tax_due_total.items()}
     }
     #Deadline to pay
     result["deadline_to_pay_tax"] = date_to_paid_tax(data)
