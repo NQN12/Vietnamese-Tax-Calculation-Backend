@@ -1,7 +1,8 @@
 from pymongo import MongoClient
 from bson import ObjectId
 
-
+#def date_to_paid_tax(date_start):
+    
 def calculate_progressive_tax(taxable_income):
     brackets = [
         (0, 5_000_000, 0.05),
@@ -26,42 +27,74 @@ def compute_tax(data):
     residency_status = data.get("residency_status", "resident")
 
     total_income = 0
-    tax_paid = {"business": 0, "one_time": 0}
-    tax_need_to_pay = {"business": 0, "one_time": 0}
+    tax_paid_total = {"business": 0, "one_time": 0}
+    tax_due_total = {"business": 0, "one_time": 0}
 
-    # === Nhóm 1: Kinh doanh ===
+    result = {
+        "business_income": {},
+        "once_off_income": {}
+    }
 
-    # HĐLĐ dài hạn (tính như kinh doanh thường xuyên)
+    # 1. income_labor_contract
     income_labor = data.get("income_labor_contract", 0)
     total_income += income_labor
-    if data.get("taxed_labor_contract"):
-        tax_paid["business"] += calculate_progressive_tax(income_labor)
+    if data.get("taxed_labor_contract", False):
+        paid = calculate_progressive_tax(income_labor)
+        due = 0
+        tax_paid_total["business"] += paid
     else:
         if residency_status == "resident":
             taxable = max(income_labor - personal_deduction - dependent_deduction, 0)
-            tax_need_to_pay["business"] += calculate_progressive_tax(taxable)
+            due = calculate_progressive_tax(taxable)
         else:
-            tax_need_to_pay["business"] += round(income_labor * 0.20)
+            due = round(income_labor * 0.20)
+        paid = 0
+        tax_due_total["business"] += due
+    result["business_income"]["income_labor_contract"] = {
+        "amount": income_labor,
+        "tax_paid": paid,
+        "tax_due": due
+    }
 
-    # Không HĐ / HĐ ngắn hạn
+    # 2. income_no_contract
     income_short = data.get("income_no_contract", 0)
     total_income += income_short
-    if data.get("taxed_no_contract"):
-        tax_paid["business"] += round(income_short * 0.10)
+    if data.get("taxed_no_contract", False):
+        paid = round(income_short * 0.10)
+        due = 0
+        tax_paid_total["business"] += paid
     else:
         if income_short * 12 > 132_000_000:
-            tax_need_to_pay["business"] += round(income_short * 0.10)
+            due = round(income_short * 0.10)
+            paid = 0
+            tax_due_total["business"] += due
+        else:
+            paid = due = 0
+    result["business_income"]["income_no_contract"] = {
+        "amount": income_short,
+        "tax_paid": paid,
+        "tax_due": due
+    }
 
-    # HĐLĐ nước ngoài
+    # 3. income_foreign_contract
     income_foreign = data.get("income_foreign_contract", 0)
     total_income += income_foreign
     tax_foreign = round(income_foreign * 0.20)
-    if data.get("deducted_tax_abroad"):
-        tax_paid["business"] += tax_foreign
+    if data.get("deducted_tax_abroad", False):
+        paid = tax_foreign
+        due = 0
+        tax_paid_total["business"] += paid
     else:
-        tax_need_to_pay["business"] += tax_foreign
+        paid = 0
+        due = tax_foreign
+        tax_due_total["business"] += due
+    result["business_income"]["income_foreign_contract"] = {
+        "amount": income_foreign,
+        "tax_paid": paid,
+        "tax_due": due
+    }
 
-    # Kinh doanh
+    # 4. business_income (flat rate or net)
     if data.get("use_flat_rate", True):
         rates = {
             "distribution": 0.015,
@@ -73,16 +106,31 @@ def compute_tax(data):
         }
         for key, val in data.get("business_income_flat", {}).items():
             total_income += val
-            tax_need_to_pay["business"] += round(val * rates.get(key, 0))
+            rate = rates.get(key, 0)
+            due = round(val * rate)
+            paid = 0
+            tax_due_total["business"] += due
+            result["business_income"][f"business_{key}"] = {
+                "amount": val,
+                "tax_paid": paid,
+                "tax_due": due
+            }
     else:
         net = data.get("business_income_net", {})
         gross = net.get("gross", 0)
         cost = net.get("cost", 0)
         profit = max(gross - cost - personal_deduction - dependent_deduction, 0)
         total_income += gross
-        tax_need_to_pay["business"] += calculate_progressive_tax(profit)
+        due = calculate_progressive_tax(profit)
+        paid = 0
+        tax_due_total["business"] += due
+        result["business_income"]["business_net"] = {
+            "amount": gross,
+            "tax_paid": paid,
+            "tax_due": due
+        }
 
-    # === Nhóm 2: Thu nhập từng lần phát sinh ===
+    # 5. once_off_income
     once_off_income = data.get("once_off_income", {})
     taxed_once = data.get("taxed_once_off", {})
     once_rates = {
@@ -98,13 +146,23 @@ def compute_tax(data):
         total_income += val
         tax = round(val * once_rates.get(key, 0))
         if taxed_once.get(key, False):
-            tax_paid["one_time"] += tax
+            paid = tax
+            due = 0
+            tax_paid_total["one_time"] += paid
         else:
-            tax_need_to_pay["one_time"] += tax
+            paid = 0
+            due = tax
+            tax_due_total["one_time"] += due
+        result["once_off_income"][key] = {
+            "amount": val,
+            "tax_paid": paid,
+            "tax_due": due
+        }
 
-    return {
-        "total_income": round(total_income),
-        "tax_paid": {k: round(v) for k, v in tax_paid.items()},
-        "tax_need_to_pay": {k: round(v) for k, v in tax_need_to_pay.items()}
+    result["total_income"] = round(total_income)
+    result["summary"] = {
+        "tax_paid": {k: round(v) for k, v in tax_paid_total.items()},
+        "tax_need_to_pay": {k: round(v) for k, v in tax_due_total.items()}
     }
 
+    return result
